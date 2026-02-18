@@ -43,16 +43,29 @@ def analyser_modules(modules):
 
     # TODO 1 : Gérer le cas où le dictionnaire est vide
     # Dans ce cas, retourner stats tel quel
-
+    if modules == {}: return stats
     # TODO 2 : Parcourir les modules
     # - Identifier le module ayant le meilleur ratio criticite / temps_intervention
     #   ⚠️ Ignorer les modules avec temps_intervention == 0
     #   ⚠️ En cas d’égalité, conserver le premier module rencontré
-
+    else:
+        somme_couts = 0
+        somme_temps = 0
+        max_ratio = 0
+        meilleur_module = None
+        for nom_module, (cout, temps, criticite) in modules.items():
+            somme_couts += cout
+            somme_temps += temps
+            if temps != 0 and criticite/temps > max_ratio:
+                max_ratio = criticite/temps
+                meilleur_module = nom_module
     # TODO 3 : Calculer les moyennes
     # - cout_moyen = somme_couts / nombre_modules
     # - temps_moyen = somme_temps / nombre_modules
 
+    stats['cout_moyen'] = somme_couts/(len(modules))
+    stats['temps_moyen'] = somme_temps/(len(modules))
+    stats['module_plus_critique'] = meilleur_module
     return stats
 
 # -------------------------------------------------------------------
@@ -80,7 +93,13 @@ def regrouper_modules_par_type(modules, types):
     #   - Ajouter le module dans la liste correspondant à son type
     #   - Créer la liste si elle n’existe pas encore
     # ⚠️ Ignorer silencieusement les modules sans type
-
+    for nom_module in modules:
+        if nom_module in types:
+            type_module = types[nom_module]
+            if type_module not in modules_par_type:
+                modules_par_type[type_module] = [nom_module]
+            else: 
+                modules_par_type[type_module].append(nom_module)
     return modules_par_type
 
 # -------------------------------------------------------------------
@@ -107,7 +126,9 @@ def calculer_cout_total(modules, interventions):
     #   - Vérifier qu’il existe dans modules
     #   - Ajouter à cout_total le cout total de maintenance du module étant donné le nombre d'interventions
     # ⚠️ Ignorer les modules absents de modules
-
+    for nom_module in interventions:
+        if nom_module in modules:
+            cout_total += modules[nom_module][0] * interventions[nom_module]
     return cout_total
 
 # -------------------------------------------------------------------
