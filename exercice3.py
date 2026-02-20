@@ -58,7 +58,13 @@ def verifier_ressources(ressources, besoin):
     #   - si stock actuel < quantite requise :
     #         peut_faire = False
     #         mettre à jour la liste "manquantes"
-
+    for resource, consumption in besoin.items():
+        if resource in ressources and ressources[resource] < consumption:
+            peut_faire = False
+            manquantes.append(resource)
+        elif resource not in ressources:
+             peut_faire = False
+             manquantes.append(resource)
     return peut_faire, manquantes
 
 
@@ -88,7 +94,8 @@ def mettre_a_jour_ressources(ressources, besoin, cycles=1):
     #   - calculer la consommation
     #   - mettre à jour le dictionnaire "nouvelles"
     # (On suppose que les données fournies sont cohérentes; pas besoin de borner à 0)
-
+    for resource, consumption in besoin.items():
+         nouvelles[resource] = ressources[resource] - consumption*cycles 
     return nouvelles
 
 
@@ -122,7 +129,9 @@ def generer_alertes_ressources(ressources, seuil=50):
     #   - si stock < seuil :
     #         calculer a_commander
     #         mettre à jour alertes
-
+    for resource, stock in ressources.items():
+         if stock < seuil:
+              alertes[resource] = (stock, niveau_cible-stock)
     return alertes
 
 
@@ -155,7 +164,12 @@ def calculer_cycles_possibles(ressources, consommations):
     #   - une ressource est considérée valide si conso > 0
     #   - si aucune ressource valide (toutes conso==0), décider nb_cycles=0 
     #   - mettre à jour "possibles"
-
+    for activity, activity_dict in consommations.items():
+         for resource, consumption in activity_dict.items():
+              if consumption == 0: 
+                  possibles[activity] = 0
+                  continue
+              else: possibles[activity] = ressources[resource]//consumption
     return possibles
 
 
@@ -195,6 +209,26 @@ Returns:
     #          - calculer la quantite max achetable
     #          - acheter la quantite requise et soustraire du budget
 
+    missing_resources = {}
+    for resource, qty_needed in besoins_prevus.items():
+         if resource not in ressources or qty_needed > ressources[resource]:
+              missing_resources[resource] = qty_needed - ressources[resource]
+    
+    sorted_missing_resources = dict(sorted(missing_resources.items(), key= lambda item: item[1], reverse = True))
+    
+    to_buy = 0
+    for res, qty in sorted_missing_resources.items():
+         if budget == 0: break
+         else:
+            for to_buy in range(int(budget)):
+                if to_buy*COUTS_UNITAIRES[res] >= budget or to_buy == qty:
+                    achats[res] = to_buy
+                    budget -= to_buy*COUTS_UNITAIRES[res]
+                    to_buy = 0
+                    break
+                else:
+                    to_buy += 1
+    
     return achats
 
 
