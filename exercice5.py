@@ -59,7 +59,21 @@ def analyser_rapport(texte, mots_cles):
     #    - si occurrences > 0 : ajouter le mot à mots_trouves (sans doublons)
     # TODO 4 : borner score entre 0 et 10 (min/max)
     # TODO 5 : retourner (score, mots_trouves)
-
+    texte = texte.lower()
+    words = texte.split()
+    words = [word.strip(" .,?!'\":;><()[]") for word in words]
+    found_words = {}
+    for word in words:
+        if word in mots_cles:
+            score += mots_cles[word]
+            if word in found_words:
+                found_words[word] += 1
+            else:
+                found_words[word] = 1
+    for word in found_words:
+        mots_trouves.append(word)
+    if score > 10: score = 10
+    elif score < 0: score = 0
     return score, mots_trouves
 
 
@@ -92,7 +106,14 @@ def categoriser_rapports(rapports, mots_cles):
     # Pour chaque texte :
     #   - faire une analyse du rapport pour en tirer le score
     #   - mettre à jour "categories"
-
+    if rapports == []:
+        return categories
+    else:
+        for report in rapports:
+            score = analyser_rapport(report, mots_cles)[0]
+            if score >= 7: categories['positifs'].append((report, score))
+            elif score >= 4 and score <= 6: categories["neutres"].append((report, score))
+            else: categories['negatifs'].append((report, score))
     return categories
 
 
@@ -119,7 +140,22 @@ def identifier_problemes(rapports_negatifs, mots_cles_negatifs):
     #   - analyser le texte (minuscules + split)
     #   - compter les occurrences de chaque mot_negatif
     #   - incrémenter problemes[mot]
-
+    for word in mots_cles_negatifs:
+        problemes[word] = 0
+    
+    for element in rapports_negatifs:
+        if type(element) == tuple:
+            words = element[0].lower().split()
+            words = [word.strip(" .,?!'\":;><()[]") for word in words]
+            for word in words:
+                if word in mots_cles_negatifs:
+                    problemes[word] += 1
+        else:
+            words = element.lower().split()
+            words = [word.strip(" .,?!'\":;><()[]") for word in words]
+            for word in words:
+                if word in mots_cles_negatifs:
+                    problemes[word] += 1
     return problemes
 
 
@@ -154,6 +190,34 @@ def generer_rapport_global(categories, problemes):
     # TODO 1 : récupérer tous les scores et calculer la moyenne (gérer le cas avec 0 rapports)
     # TODO 2 : trouver les 3 problèmes les plus fréquents sans utiliser sorted(), un tri simple type “sélection des max” est suffisant.)
 
+    empty = True
+    for report in categories.values():
+        if report != []:
+            empty = False
+            break
+    if empty == True: return rapport
+
+    rapport['nb_positifs'] = len(categories['positifs'])
+    rapport['nb_neutres'] = len(categories['neutres'])
+    rapport["nb_negatifs"] = len(categories['negatifs'])
+    total_score = 0
+    for item in categories.values():
+        for tuple in item:
+            total_score += tuple[1]
+    total_reports = len(categories['positifs']) + len(categories['neutres']) + len(categories['negatifs'])
+    rapport["score_moyen"] = total_score/total_reports
+
+    issues = list(problemes.items())
+    for i in range(len(issues)):
+        max_index = i
+        for j in range(i + 1, len(issues)):
+            if issues[j][1] > issues[max_index][1]: max_index = j
+        issues[i], issues[max_index] = issues[max_index], issues[i]
+
+    for word, count in issues:
+        if count > 0:
+            rapport["top_problemes"].append(word)
+        if len(rapport['top_problemes']) == 3: break
     return rapport
 
 
@@ -185,6 +249,17 @@ def calculer_tendance(historique_scores):
     # - Gérer les cas vides / 1 élément
     # - Couper en deux moitiés
     # - Comparer les moyennes
+    if len(historique_scores) == 0 or len(historique_scores) == 1: return 'stable'
+    if len(historique_scores) % 2 == 0: 
+        first_half = historique_scores[:int(len(historique_scores)/2)]
+        second_half = historique_scores[int(len(historique_scores)/2):]
+    else:
+        first_half = historique_scores[:int(len(historique_scores)//2)]
+        second_half = historique_scores[(int(len(historique_scores)//2) + 1):]
+    
+    if sum(first_half)/len(first_half) < sum(second_half)/len(second_half): return 'amelioration'
+    elif sum(first_half)/len(first_half) == sum(second_half)/len(second_half): return 'stable'
+    else: return 'degradation'
 
 
 # -------------------------------------------------------------

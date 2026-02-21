@@ -45,10 +45,14 @@ def calculer_priorite(intervention):
     score = 0
 
     # TODO 1 : Récupérer urgence, duree, critique avec .get()
-
+    urgency = intervention.get("urgence", 0)
+    duration = intervention.get("duree", 0)
+    criticality = intervention.get("critique", False)
+    crit_score = 0
     # TODO 2 : Calculer le score selon la formule
     #          Penser à convertir critique en 1/0 
-
+    if criticality == True: crit_score = 1
+    score = urgency*2 + duration + crit_score*10
     return score
 
 
@@ -77,11 +81,14 @@ def trier_interventions(liste_interventions):
 
     # TODO 1 : Créer une copie de la liste pour éviter les effets de bord
     #          Indice : interventions = liste_interventions[:]
-
+    interventions = liste_interventions[:]
     # TODO 2 : Implémenter un tri stable décroissant
     # Astuce stabilité :
     # - si score_i == score_j, NE PAS échanger
-
+    for i in range(0, len(liste_interventions), 1):
+        for j in range(0, len(liste_interventions) - i - 1, 1):
+            if calculer_priorite(interventions[j]) < calculer_priorite(interventions[j+1]):
+                interventions[j], interventions[j+1] = interventions[j+1], interventions[j]
     return interventions
 
 
@@ -109,10 +116,16 @@ def estimer_temps_interventions(liste_triee):
         'temps_total': 0,
         'temps_moyen': 0
     }
-
+    total_time = 0
+    avg_time = 0
     # TODO 1 : Calculer le temps total
     # TODO 2 : Calculer le temps moyen (0 si liste vide)
-
+    for i in range(len(liste_triee)):
+        total_time += liste_triee[i]["duree"]*4
+    if total_time != 0:
+        avg_time = total_time/len(liste_triee)
+    temps_stats["temps_total"] = total_time
+    temps_stats["temps_moyen"] = avg_time
     return temps_stats
 
 
@@ -142,7 +155,9 @@ def identifier_interventions_urgentes(liste, seuil=30):
     #   - si urgence > seuil, ajouter l'id.
     # ⚠️ Si 'id' manquant, tu peux ignorer l'intervention ou ajouter None
     # (au choix, mais rester cohérent)
-
+    for intervention in liste:
+        if intervention.get("urgence", 0) > seuil:
+            urgentes.append(intervention["id"])
     return urgentes
 
 # -------------------------------------------------------------------
